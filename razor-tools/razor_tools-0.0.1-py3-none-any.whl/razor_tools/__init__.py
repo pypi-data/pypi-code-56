@@ -1,0 +1,1 @@
+print('This is Razor Tools placeholder package.')
