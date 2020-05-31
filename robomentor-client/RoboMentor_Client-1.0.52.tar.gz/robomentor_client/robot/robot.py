@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+"""
+RoboMentor_Client: Python library and framework for RoboMentor_Client.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:copyright: (c) 2020 by RoboMentor.
+:license: MIT, see LICENSE for more details.
+"""
+
+from ..utils import Log
+
+
+class Robot(object):
+
+    def start(self):
+        pass
+
+    def close(self):
+        pass
+
+    @staticmethod
+    def message(self, message):
+        Log.info("我是类，收到远程消息：" + str(message))
