@@ -1,0 +1,184 @@
+# coding:utf-8
+
+"""
+@author:    daben_chen
+
+checkjson.py Test JSON is in another JSON and return each other's key-value pairs
+"""
+
+from copy import deepcopy
+import pprint
+
+
+def rule(data):
+    """
+    resul"""
+    result = []
+    for k in data:
+        result.append(data[k]["code"])
+    return result
+
+def optimum(sub, result, path):
+    """
+    result[]"""
+    if path != "/":
+        path += "."
+    
+    res = result
+    for k in sub:
+        result = deepcopy(res)
+        temp = res
+        res = []
+        flag = False
+        for data in result:
+            if path + k not in data:
+                flag = True
+                res.append(data)
+        
+        if not flag:
+            temp.sort(key=lambda d: rule(d))
+            return temp[0]
+        result.sort(key=lambda d: rule(d))
+        # pprint(result[0])
+        return result[0]
+
+def list2dict(data):
+    """
+    dict[key, data]"""
+    keys = ['['+str(i)+']' for i in range(len(data))]
+    return dict[zip(keys, data)]
+
+def check(sub, parent, sp="/", pp="/"):
+    """
+    sp: sub_path
+    pp: parent_path
+    """
+    re = {"code":0, "result":{}, "var":{}, "none":[]}
+    if sp != "/":
+        sp += "."
+    if pp != "/":
+        pp += "."
+
+    for k, sv in sub.items():
+        # 判断键值是否是 <value> 格式，如果是，则表明是变量赋值
+        var_flag = isinstance(sv, str) and sv.startswith("<") and sv.endswith(">")
+
+        # 如果预期键不存在, 实际键存在
+        if k in parent:
+            re["result"][sp + k] = {"code": 4, "sv": sv, "pp": pp + k, "pv": parent[k]}
+
+        # 如果预期键存在
+        elif sv == '+':
+            # 预期键存在，实际键不存在
+            if k not in parent:
+                re["result"][sp + k] = {"code": 3, "sv": sv, "pp": None, "pv": None}
+        
+        elif k in parent:
+            pv = parent[k]
+            code = 0
+
+            if var_flag:
+                re["var"][sv[1:-1]] = pv
+                continue
+            elif isinstance(sv, str):
+                if not isinstance(pv, str):
+                    code = 2    # 键值的数据类型不一致
+                elif sv.startswith("*"):
+                    if sv[1:] not in pv:
+                        code = 1
+                elif sv.startswith("^"):
+                    if not pv.startswith(sv[1:]):
+                        code = 1
+                elif sv.startswith("$"):
+                    if not pv.endswith(sv[1:]):
+                        code = 1
+                elif sv.startswith("#"):
+                    if sv[1:] == str(pv):
+                        code = 1
+                elif sv.startswith("\\"):
+                    sv = sv[1:]
+                elif sv != pv:
+                    code = 1
+            
+            elif isinstance(sv, int):
+                if not isinstance(pv, int):
+                    code = 2
+                elif sv != pv:
+                    code = 1
+            
+            elif isinstance(sv, float):
+                if not isinstance(pv, float):
+                    code = 2
+                elif sv != pv:
+                    code = 1
+            
+            elif isinstance(sv, list):
+                if not isinstance(pv, list):
+                    code = 2
+                else:
+                    for i in range(len(sv)):  # 把二级列表转换为dict
+                        if isinstance(sv[i], list):
+                            sv[i] = list2dict(sv[i])
+                    for i in range(len(pv)):
+                        if isinstance(pv[i], list):
+                            pv[i] = list2dict(pv[i])
+                    
+                    if isinstance(sv[0], dict):  # list 子项为 dict
+                        for i, sv_i in enumerate(sv):
+                            result = []
+                            flag = False
+                            for j, pv_i in enumerate(pv):
+                                r = check(sv_i, pv_i, sp + k + '[%s]' % i, pp + k + '[%s]' % j)
+                                if r["code"] == 0:
+                                    flag = True
+                                    re['var'] = dict(re['var'], **r['var'])
+                                    break
+                                else:
+                                    result.append(r["result"])
+                            if result:
+                                o = optimum(sv_i, result, sp + k + '[%s]' % i)
+                            else:
+                                o = {}
+                            re["var"] = dict(re["var"], **re["var"])
+                            if not flag:
+                                re["result"] = dict(re["result"], **o)
+
+                    else:   # list子项为int/str/float/None/False/True
+                        for v in sv:
+                            if v not in pv:
+                                code = 5  # 预期的list值在实际值的list不存在
+                                re["result"][sp + k] = {"code": 5, "sv": sv, "pp": pp + k, "pv": pv}
+
+            elif isinstance(sv, dict):
+                if not isinstance(pv, dict):
+                    code = 2  # 键值的数据类型不一致
+                else:
+                    r = check(sv, pv, sp + k, pp + k)
+                    if r["code"] == 0:
+                        re["var"] = dict(re["var"], **r["var"])
+                        continue
+                    else:
+                        re["result"] = dict(re["result"], **r["result"])
+                        for k in r["var"]:
+                            r["var"][k] = None
+                            if k not in re["none"]:
+                                re["none"].append(k)
+                        re["var"] = dict(re["var"], **r["var"])
+
+            if code != 0:
+                re["result"][sp + k] = {"code": code, "sv": sv, "pp": pp + k, "pv": pv}
+        else:   # 键不存在
+            if var_flag:
+                re["var"][sv[1:-1]] = None
+                re["none"].append(sv[1:-1])
+            else:
+                re["result"][sp + k] = {"code": 3, "sv": sv, "pp": None, "pv": None}
+    re["code"] = len(re["result"])
+    return re
+
+
+if __name__ == '__main__':
+    pass
+
+                
+
