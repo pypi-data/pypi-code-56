@@ -1,0 +1,57 @@
+from pwx_db import PostgresDB, RedisPWX
+from pwx_db.sync import EntitySync
+
+
+class BaseService:
+    __slots__ = ['_entity', '_name']
+
+    _db = PostgresDB()
+    _redis = RedisPWX()
+
+    def __init__(self, name):
+        self._name = name
+        self.__sync_entity()
+
+    def __sync_entity(self):
+        self._entity = EntitySync(name=self._name)
+        self._entity.__sync_attrs__()
+
+    def __execute_sql(self, sql, many=False):
+        if not many:
+            return self._db.execute_query_one(sql=sql)
+
+        return self._db.execute_query_all(sql=sql)
+
+    def _sync_with_redis(self, sql):
+        result = self.__execute_sql(sql)
+
+        if not result:
+            raise ValueError
+
+        value_id, json = self._entity.__to_json__(values=result)
+
+        self.__save_redis(value_id, json)
+
+        return value_id
+
+    def _sync_many_with_redis(self, sql):
+        results = self.__execute_sql(sql, many=True)
+
+        if not results:
+            raise ValueError
+
+        list_ids = []
+
+        for result in results:
+            value_id, json = self._entity.__to_json__(values=result)
+            self.__save_redis(value_id, json)
+            list_ids.append(value_id)
+
+        return list_ids
+
+    def __save_redis(self, value_id, payload):
+        self._redis.add(collection=self._name, key=value_id, value=payload)
+
+    def _get_sql(self): ...
+
+    def sync(self): ...
