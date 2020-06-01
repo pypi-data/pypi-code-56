@@ -1,0 +1,13 @@
+from setuptools import setup
+
+setup(
+  name='rl_learn',
+  version='0.1.1',
+  description='A package to accompany the book "Reinforcement Learning: A Python Introduction"',
+  long_description='Test',
+  author='Gregory Hogg',
+  author_email='gahogg@uwaterloo.ca',
+  url='https://github.com/gahogg/rl_learn.git',
+  license='MIT',
+  packages=['rl_learn'],
+  zip_safe=False)
