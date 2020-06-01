@@ -1,0 +1,26 @@
+import setuptools
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+setuptools.setup(
+    name="bs-processors",
+    version="0.0.1pre02",
+    author="RaduW",
+    description="html/xml processors for using with BeautifulSoup",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url=" https://github.com/RaduW/bs-processors.git",
+    packages=setuptools.find_packages(include=["src"]),
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "Topic :: Software Development :: Libraries"
+    ],
+    keywords ="BeautifulSoup",
+    python_requires=">=3.7",
+    license="MIT",
+)
