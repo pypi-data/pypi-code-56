@@ -1,0 +1,1 @@
+name = "HelloWorld-in-PIP"      # 你的Python包的名字
