@@ -1,0 +1,26 @@
+import pathlib
+from setuptools import setup
+
+HERE = pathlib.Path(__file__).parent
+
+README = (HERE / 'README.md').read_text()
+
+setup(
+    name='pyconfigurableml',
+    version='0.0.0',
+    description='Configurable ML in Python',
+    long_description=README,
+    long_description_content_type='text/markdown',
+    url='https://github.com/dkmiller/pyconfigurableml',
+    author='Daniel Miller',
+    author_email='daniel.keegan.miller@gmail.com',
+    license='MIT',
+    classifiers=[
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
+    ],
+    packages=['pyconfigurableml'],
+    include_package_data=True,
+    install_requires=['typeguard>=2.8.0', 'pyyaml>=5.3.1'],
+)
