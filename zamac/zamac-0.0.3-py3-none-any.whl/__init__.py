@@ -1,0 +1,1 @@
+from zamac.file import *
