@@ -1,0 +1,100 @@
+# -*- coding: utf-8 -*-
+"""
+RoboMentor_Client: Python library and framework for RoboMentor_Client.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:copyright: (c) 2020 by RoboMentor.
+:license: MIT, see LICENSE for more details.
+"""
+
+import sys
+import socket
+import re
+import uuid
+import time
+import json
+import platform
+import threading
+from .utils import Log
+from .service import Message, Service, System
+from .__config__ import __apiUrl__, __messageUrl__, __version__
+
+if len(sys.argv) < 3:
+    Log.error("Input app_id OR app_secret Error")
+    sys.exit(0)
+
+class Init:
+
+    def __init__(self):
+
+        Log.info("RoboMentor_Client " + __version__)
+
+        auth_time = time.strftime('%Y%m%d%H%M', time.localtime(time.time()))
+
+        headers = {
+            "Content-Type": "application/json",
+            "Robot-Token": sys.argv[1] + "@" + sys.argv[2] + "@" + auth_time
+        }
+
+        params_ip = self.get_host_ip()
+
+        params_mac = self.get_mac_address()
+
+        params_platform = self.get_platform()
+
+        params = {"app_id": sys.argv[1], "app_secret": sys.argv[2], "robot_mac": params_mac, "robot_ip": params_ip, "robot_platform": params_platform, "robot_version": __version__}
+
+        res = Service.api(__apiUrl__ + "/oauth/robot/register", params, headers, 'GET')
+
+        res_json = res.json()
+
+        assert res_json["code"] == 0, Log.error("Robot Init Error")
+
+        self.app_id = str(sys.argv[1])
+        self.app_secret = str(sys.argv[2])
+        self.ip = str(params_ip)
+        self.mac = str(params_mac)
+        self.token = str(res_json["data"]["token"])
+        self.name = str(res_json["data"]["robot_title"])
+        self.net_ip = str(res_json["data"]["robot_net_ip"])
+        self.version = str(__version__)
+        self.message = Message(__messageUrl__, self.mac, self.app_id, self.app_secret).start()
+        self.system_task_thread = threading.Thread(target=self.system_task)
+        self.message_task_thread = threading.Thread(target=self.message_task)
+        self.message_task_thread.start()
+        self.system_task_thread.start()
+
+    def system_task(self):
+        system = System()
+        while True:
+         data = {"message_type": "system_message", "system_message": {"time": time.strftime('%H:%M:%S', time.localtime(time.time())), "cpu": system.get_cpu_info(), "memory": system.get_memory_info()}}
+         self.message.publish(json.dumps(data))
+         time.sleep(3)
+
+    def message_task(self):
+        while True:
+            message_data = self.message.get_message()
+            if message_data is not None:
+                Log.info("收到消息")
+                if message_data["message_type"] == "robot_config":
+                    Log.info("这条消息是机器人配置消息")
+                    message_data_json = json.loads(message_data["robot_config"]["content"])
+                    self.name = message_data_json["robot_title"]
+                    Log.info(self.name)
+
+    @staticmethod
+    def get_host_ip():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(('8.8.8.8', 80))
+            ip_adds = s.getsockname()[0]
+        finally:
+            s.close()
+        return ip_adds
+
+    @staticmethod
+    def get_mac_address():
+        return ":".join(re.findall(r".{2}", uuid.uuid1().hex[-12:]))
+
+    @staticmethod
+    def get_platform():
+        return platform.system() + " " + platform.machine()
