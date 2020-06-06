@@ -1,0 +1,5 @@
+ADJECTIVE = 'adjective'
+COLOR = 'color'
+ANIMAL = 'animal'
+NUMBER = 'number'
+PLACE = 'place'
