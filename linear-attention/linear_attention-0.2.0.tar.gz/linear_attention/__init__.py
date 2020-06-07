@@ -1,0 +1,1 @@
+from linear_attention.linear_attention import LinearSelfAttention
