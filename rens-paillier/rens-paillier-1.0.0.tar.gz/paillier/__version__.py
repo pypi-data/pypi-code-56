@@ -1,0 +1,7 @@
+__title__ = 'rens-paillier'
+__description__ = 'Paillier encryption'
+__url__ = 'https://gitlab.com/RensOliemans/paillier'
+__version__ = '1.0.0'
+__author__ = 'Rens Oliemans'
+__author_email__ = 'rens.oliemans@gmail.com'
+__license__ = 'MIT'
