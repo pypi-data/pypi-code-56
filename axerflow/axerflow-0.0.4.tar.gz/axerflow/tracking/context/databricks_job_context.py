@@ -1,0 +1,39 @@
+from axerflow.tracking.context.abstract_context import RunContextProvider
+from axerflow.utils import databricks_utils
+from axerflow.entities import SourceType
+from axerflow.utils.axerflow_tags import (
+    axerflow_SOURCE_TYPE,
+    axerflow_SOURCE_NAME,
+    axerflow_DATABRICKS_WEBAPP_URL,
+    axerflow_DATABRICKS_JOB_ID,
+    axerflow_DATABRICKS_JOB_RUN_ID,
+    axerflow_DATABRICKS_JOB_TYPE,
+)
+
+
+class DatabricksJobRunContext(RunContextProvider):
+    def in_context(self):
+        return databricks_utils.is_in_databricks_job()
+
+    def tags(self):
+        job_id = databricks_utils.get_job_id()
+        job_run_id = databricks_utils.get_job_run_id()
+        job_type = databricks_utils.get_job_type()
+        webapp_url = databricks_utils.get_webapp_url()
+        tags = {
+            axerflow_SOURCE_NAME: (
+                "jobs/{job_id}/run/{job_run_id}".format(
+                    job_id=job_id, job_run_id=job_run_id)
+                if job_id is not None and job_run_id is not None else None
+            ),
+            axerflow_SOURCE_TYPE: SourceType.to_string(SourceType.JOB)
+        }
+        if job_id is not None:
+            tags[axerflow_DATABRICKS_JOB_ID] = job_id
+        if job_run_id is not None:
+            tags[axerflow_DATABRICKS_JOB_RUN_ID] = job_run_id
+        if job_type is not None:
+            tags[axerflow_DATABRICKS_JOB_TYPE] = job_type
+        if webapp_url is not None:
+            tags[axerflow_DATABRICKS_WEBAPP_URL] = webapp_url
+        return tags
