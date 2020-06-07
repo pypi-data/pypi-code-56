@@ -1,0 +1,1 @@
+from .wallhavenImage import WallhavenImage
