@@ -1,0 +1,19 @@
+"""
+Author: masakokh
+Version: 1.0.0
+"""
+from typing import Any
+from schema.TypeSchema import TypeSchema
+from rule import *
+
+
+class Rule:
+	"""
+
+	"""
+	def __init__(self):
+		"""
+
+		"""
+		# instance
+		self.__type			= TypeSchema()
