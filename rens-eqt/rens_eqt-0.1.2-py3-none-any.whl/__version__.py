@@ -1,0 +1,7 @@
+__title__ = 'rens-eqt'
+__description__ = 'Secure Equality Testing'
+__url__ = 'https://gitlab.com/RensOliemans/eqt'
+__version__ = '0.1.2'
+__author__ = 'Rens Oliemans'
+__author_email__ = 'rens.oliemans@gmail.com'
+__license__ = 'MIT'
