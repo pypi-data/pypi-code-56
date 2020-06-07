@@ -1,0 +1,2 @@
+#DEPRECATED!!!
+from djangohotsauce import *
