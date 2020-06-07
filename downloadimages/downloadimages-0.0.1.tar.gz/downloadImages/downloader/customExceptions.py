@@ -1,0 +1,2 @@
+class DownloaderInvaildParam(Exception):
+    pass
