@@ -1,0 +1,11 @@
+from .contactpoint import ContactPoint
+from .data_distribution_service import DataDistributionService
+from .dataset import Dataset, DataService
+from .dcat_resource import DcatResource
+from .distribution import Distribution
+from .harvest_meta_data import HarvestMetaData
+from .publisher import Publisher
+from .quality_annotation import QualityAnnotation
+from .references import Reference
+from .skos_concept import SkosConcept
+from .temporal import Temporal
