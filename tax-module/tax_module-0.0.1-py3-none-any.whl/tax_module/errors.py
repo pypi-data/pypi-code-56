@@ -1,0 +1,2 @@
+class NoTaxRuleFoundError(Exception):
+    pass
