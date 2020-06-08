@@ -1,0 +1,3 @@
+MUTATION = '''mutation {{
+  {mutation}
+}}'''
