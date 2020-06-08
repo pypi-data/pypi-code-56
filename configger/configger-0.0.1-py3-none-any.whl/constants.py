@@ -1,0 +1,13 @@
+CONFIGGER_MODE_ENV = "env"
+CONFIGGER_MODE_DEFAULT = "default"
+CONFIGGER_MODE_TEST = "test"
+CONFIGGER_MODE_FILE = "file"
+
+REQUIRED_STRING = "required_string"
+REQUIRED_BOOL = "required_bool"
+REQUIRED_INT = "required_int"
+REQUIRED_FLOAT = "required_float"
+OPTIONAL_STRING = "optional_string"
+OPTIONAL_BOOL = "optional_bool"
+OPTIONAL_INT = "optional_int"
+OPTIONAL_FLOAT = "optional_float"
