@@ -1,0 +1,173 @@
+import argparse
+import logging
+import requests
+import sys
+
+from crlite_query import CRLiteDB, CRLiteQuery, IntermediatesDB
+from datetime import datetime, timedelta
+from pathlib import Path
+from urllib.parse import urlparse
+
+log = logging.getLogger("query_cli")
+
+
+crlite_collection_prod = (
+    "https://firefox.settings.services.mozilla.com/v1/buckets/security-state"
+    + "/collections/cert-revocations/records"
+)
+crlite_collection_stage = (
+    "https://settings.stage.mozaws.net/v1/buckets/security-state"
+    + "/collections/cert-revocations/records"
+)
+intermediates_collection_prod = (
+    "https://firefox.settings.services.mozilla.com/v1/buckets/security-state"
+    + "/collections/intermediates/records"
+)
+
+
+def find_attachments_base_url(urlstring):
+    url = urlparse(urlstring)
+    base_rsp = requests.get(f"{url.scheme}://{url.netloc}/v1/")
+    return base_rsp.json()["capabilities"]["attachments"]["base_url"]
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Query CRLite data",
+        epilog="""
+      The --db option should point to a folder containing a single filter file of
+      the form "YYYYMMDDnn.filter" along with a collection of files of the form
+      "YYYYMMDDnn.stash" which contain updates from that original filter. By
+      default, if this tool believes it is out-of-date based on the local
+      database, it will attempt to update itself before performing its checks.
+      To avoid that behavior, pass --no-update on the command line.
+    """,
+    )
+    parser.add_argument(
+        "files", help="PEM files to load", type=argparse.FileType("r"), nargs="*"
+    )
+    parser.add_argument(
+        "--db",
+        type=Path,
+        default=Path("~/.crlite_db"),
+        help="Path to CRLite database folder",
+    )
+    parser.add_argument(
+        "--no-update", help="Do not attempt to update the database", action="store_true"
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--force-update", help="Force an update to the database", action="store_true"
+    )
+    group.add_argument(
+        "--use-filter",
+        help="Use this specific filter file, ignoring the database",
+        type=Path,
+    )
+    parser.add_argument(
+        "--no-delete",
+        help="Do not attempt to delete old database files",
+        action="store_true",
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--crlite-url",
+        default=crlite_collection_prod,
+        help="URL to the CRLite records at Remote Settings.",
+    )
+    group.add_argument(
+        "--crlite-staging", action="store_true", help="Use the staging URL for CRLite",
+    )
+    parser.add_argument(
+        "--intermediates-url",
+        default=intermediates_collection_prod,
+        help="URL to the CRLite records at Remote Settings.",
+    )
+    group.add_argument(
+        "--download-intermediates",
+        action="store_true",
+        help="Download all intermediate PEM files to the database",
+    )
+    parser.add_argument(
+        "--verbose", "-v", help="Be more verbose", action="count", default=0
+    )
+
+    args = parser.parse_args()
+
+    if args.crlite_staging:
+        args.crlite_url = crlite_collection_stage
+
+    if args.verbose > 0:
+        logging.basicConfig(level=logging.DEBUG)
+        if args.verbose > 1:
+            from pyasn1 import debug
+
+            debug.setLogger(debug.Debug("all"))
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    db_dir = args.db.expanduser()
+
+    if not db_dir.is_dir():
+        db_dir.expanduser().mkdir()
+
+    last_updated_file = (db_dir / ".last_updated").expanduser()
+    if last_updated_file.exists() and not args.force_update:
+        updated_file_timestamp = datetime.fromtimestamp(
+            last_updated_file.stat().st_mtime
+        )
+        grace_time = datetime.now() - timedelta(hours=6)
+        if last_updated_file.is_file() and updated_file_timestamp > grace_time:
+            log.info(f"Database was updated at {updated_file_timestamp}, skipping.")
+            log.debug(
+                f"Database was last updated {datetime.now() - updated_file_timestamp} ago."
+            )
+            args.no_update = True
+
+    attachments_base_url = find_attachments_base_url(args.crlite_url)
+
+    intermediates_db = IntermediatesDB(
+        db_path=db_dir, download_pems=args.download_intermediates
+    )
+    crlite_db = CRLiteDB(db_path=args.db)
+
+    try:
+        if args.force_update or not args.no_update:
+            if args.download_intermediates:
+                log.info(
+                    "Downloading all intermediate certificates. Look in "
+                    + f"{intermediates_db.intermediates_path}"
+                )
+
+            intermediates_db.update(
+                collection_url=args.intermediates_url,
+                attachments_base_url=attachments_base_url,
+            )
+            crlite_db.update(
+                collection_url=args.crlite_url,
+                attachments_base_url=attachments_base_url,
+            )
+            last_updated_file.touch()
+    except KeyboardInterrupt:
+        log.warning("Interrupted.")
+        sys.exit(1)
+
+    if args.use_filter:
+        crlite_db.load_filter(path=args.use_filter)
+
+    if not args.no_delete:
+        crlite_db.cleanup()
+
+    log.info(f"Status: {intermediates_db}, {crlite_db}")
+
+    query = CRLiteQuery(intermediates_db=intermediates_db, crlite_db=crlite_db)
+
+    if not args.files:
+        log.info("No PEM files specified to load. Run with --help for usage.")
+
+    for file in args.files:
+        query.print_pem(file)
+
+
+if __name__ == "__main__":
+    main()
