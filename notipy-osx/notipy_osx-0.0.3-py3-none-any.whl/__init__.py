@@ -1,0 +1,1 @@
+from notipy_osx.dialog import dialog_prompt
