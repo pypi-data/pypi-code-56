@@ -1,0 +1,1 @@
+from pa_generator import AlexaSkillGenerator
