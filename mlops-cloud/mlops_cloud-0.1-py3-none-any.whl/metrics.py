@@ -1,0 +1,61 @@
+import boto3
+import os
+from datetime import datetime
+from uuid import uuid4
+import json
+import tensorflow as tf
+
+
+AWS_REGION = os.environ["AWS_REGION"]
+
+
+class MLOpsTensorFlowCallback(tf.keras.callbacks.Callback):
+    def __init__(self, metrics: list, model_id: str, project_id: str):
+        self.sqs = boto3.client("ssm", region_name=AWS_REGION)
+        self.sqs_url = self._get_sqs_url()
+        self.metrics = metrics
+        self.job_id = model_id
+        self.project_id = project_id
+
+    def _get_sqs_url(self):
+        return self.sqs.get_parameter(
+            Name="mlops-sqs-metrics-url", WithDecryption=True
+        )["Parameter"]["Value"]
+
+    def on_epoch_end(self, epoch, logs={}):
+        data = {}
+        for metric in self.metrics:
+            data[metric] = logs[metric].item()
+            data[f"val_{metric}"] = logs[metric].item()
+
+        self.save_metrics(data)
+
+    def on_train_end(self, logs={}):
+        print(f"train end log: {logs}")
+
+    def save_metrics(self, data: dict):
+        """ Push metrics to a FIFO SQS queue.
+        _data_ has the expected format of {'metric': 'value'}
+        """
+        time = datetime.now()
+        entries = []
+        msg_group_id = uuid4().int
+        for k, v in data.items():
+            msg_dedup_id = uuid4().int
+            msg_id = uuid4().int
+            entry = {
+                "Id": msg_id,
+                "MessageBody": json.dumps(
+                    {
+                        "metric": k,
+                        "value": v,
+                        "timestamp": time.isoformat(),
+                        "jobId": self.job_id,
+                        "projectId": self.project_id,
+                    }
+                ),
+                "MessageDeduplicationId": msg_dedup_id,
+                "MessageGroupId": msg_group_id,
+            }
+            entries.append(entry)
+        self.sqs.send_message_batch(QueueUrl=self.sqs_url, Entries=entries)
