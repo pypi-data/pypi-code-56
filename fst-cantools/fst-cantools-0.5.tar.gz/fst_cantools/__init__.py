@@ -1,0 +1,1 @@
+from fst_cantools.fst_cantools import fst_cantools
