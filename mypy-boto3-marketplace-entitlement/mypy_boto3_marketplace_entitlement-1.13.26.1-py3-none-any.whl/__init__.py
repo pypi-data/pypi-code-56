@@ -1,0 +1,29 @@
+"""
+Main interface for marketplace-entitlement service.
+
+Usage::
+
+    ```python
+    import boto3
+    from mypy_boto3_marketplace_entitlement import (
+        Client,
+        GetEntitlementsPaginator,
+        MarketplaceEntitlementServiceClient,
+    )
+
+    session = boto3.Session()
+
+    client: MarketplaceEntitlementServiceClient = boto3.client("marketplace-entitlement")
+    session_client: MarketplaceEntitlementServiceClient = session.client("marketplace-entitlement")
+
+    get_entitlements_paginator: GetEntitlementsPaginator = client.get_paginator("get_entitlements")
+    ```
+"""
+from mypy_boto3_marketplace_entitlement.client import (
+    MarketplaceEntitlementServiceClient,
+    MarketplaceEntitlementServiceClient as Client,
+)
+from mypy_boto3_marketplace_entitlement.paginator import GetEntitlementsPaginator
+
+
+__all__ = ("Client", "GetEntitlementsPaginator", "MarketplaceEntitlementServiceClient")
